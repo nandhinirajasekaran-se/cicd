@@ -1,0 +1,29 @@
+- name: Deploy Spring Boot JAR locally
+  hosts: local
+  connection: local
+  become: false
+
+  vars:
+    deploy_dir: /Users/nandhinirajasekaran/Desktop/JProjects/ansible/opt/myapp
+    jar_name: ansible-0.0.1-SNAPSHOT.jar
+
+  tasks:
+    - name: Ensure deployment directory exists
+      file:
+        path: "{{ deploy_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copy JAR file
+      copy:
+        src: "../target/{{ jar_name }}"
+        dest: "{{ deploy_dir }}/{{ jar_name }}"
+        mode: '0755'
+
+    - name: Kill existing app process (if any)
+      shell: pkill -f "{{ jar_name }}" || true
+      ignore_errors: true
+
+    - name: Start Spring Boot app with nohup
+      shell: |
+        nohup java -jar {{ deploy_dir }}/{{ jar_name }} > /tmp/myapp.log 2>&1 &
