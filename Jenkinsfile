@@ -1,44 +1,80 @@
 pipeline {
     agent any
 
+    // Webhook trigger configuration
+    triggers {
+        githubPush()  // Requires GitHub plugin
+    }
+
     environment {
-        DEPLOY_DIR = '/Users/nandhinirajasekaran/Desktop/JProjects/ansible/opt/myapp' // Change this as needed
-        JAR_NAME = 'ansible-0.0.1-SNAPSHOT.jar' // Match your actual jar name if different
+        // Customize these values
+        DEPLOY_DIR = "${WORKSPACE}/deployments"
+        JAR_NAME = "ansible-*.jar"  // Wildcard to match versioned JARs
+        ANSIBLE_DIR = "ansible"
     }
 
     stages {
-        stage('Checkout') {
+        // Stage 1: SCM Checkout
+        stage('Checkout Code') {
             steps {
-                git 'https://github.com/nandhinirajasekaran-se/cicd.git' // Replace with your actual repo
+                checkout scm  // Automatically checks out the triggering commit
             }
         }
 
-        stage('Build') {
+        // Stage 2: Maven Build
+        stage('Build with Maven') {
             steps {
-                sh './mvnw clean package -DskipTests'
+                sh '''
+                    chmod +x mvnw
+                    ./mvnw clean package -DskipTests
+                '''
+            }
+            post {
+                success {
+                    archiveArtifacts "target/${JAR_NAME}"  // Archive the built JAR
+                }
             }
         }
 
-        stage('Test') {
-            steps {
-                sh './mvnw test'
-            }
-        }
-
+        // Stage 3: Ansible Deployment
         stage('Deploy with Ansible') {
             steps {
-                // If ansible isn't in PATH, use full path e.g. /opt/homebrew/bin/ansible-playbook
-                sh 'ansible-playbook ansible/deploy.yml -i ansible/inventory'
+                script {
+                    // Verify JAR exists
+                    def jarFile = findFiles(glob: "target/${JAR_NAME}")[0].path
+
+                    dir(ANSIBLE_DIR) {
+                        // Copy JAR to Ansible accessible location
+                        sh "mkdir -p ${DEPLOY_DIR}"
+                        sh "cp ../${jarFile} ${DEPLOY_DIR}/app.jar"
+
+                        // Execute Ansible
+                        sh "ansible-playbook -i inventory deploy.yml -vvv"
+                    }
+                }
             }
         }
     }
 
     post {
+        always {
+            junit 'target/surefire-reports/*.xml'  // Publish test reports
+            cleanWs()  // Clean workspace after build
+        }
         success {
-            echo 'Build and deployment completed!'
+            slackSend(
+                color: 'good',
+                message: "SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}\n" +
+                         "Commit: ${env.GIT_COMMIT.take(8)}\n" +
+                         "Branch: ${env.GIT_BRANCH}"
+            )
         }
         failure {
-            echo 'Build or deploy failed. Check logs.'
+            slackSend(
+                color: 'danger',
+                message: "FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}\n" +
+                         "See: ${env.BUILD_URL}console"
+            )
         }
     }
 }

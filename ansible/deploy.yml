@@ -1,29 +1,32 @@
+---
 - name: Deploy Spring Boot JAR locally
-  hosts: local
-  connection: local
-  become: false
+  hosts: localhost
+  become: false  # No sudo needed for local deployment
 
   vars:
-    deploy_dir: /Users/nandhinirajasekaran/Desktop/JProjects/ansible/opt/myapp
-    jar_name: ansible-0.0.1-SNAPSHOT.jar
+    jar_name: "ansible-0.0.1-SNAPSHOT.jar"  # Match your actual JAR name
+    deploy_dir: "{{ playbook_dir }}/opt/myapp"  # Your target directory
 
   tasks:
     - name: Ensure deployment directory exists
-      file:
+      ansible.builtin.file:
         path: "{{ deploy_dir }}"
         state: directory
         mode: '0755'
 
     - name: Copy JAR file
-      copy:
-        src: "../target/{{ jar_name }}"
-        dest: "{{ deploy_dir }}/{{ jar_name }}"
-        mode: '0755'
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../target/{{ jar_name }}"  # Correct relative path
+        dest: "{{ deploy_dir }}/"
+        remote_src: false  # File exists on control machine (Jenkins)
 
     - name: Kill existing app process (if any)
-      shell: pkill -f "{{ jar_name }}" || true
-      ignore_errors: true
+      ansible.builtin.shell: |
+        pkill -f "java -jar {{ deploy_dir }}/{{ jar_name }}" || true
+      changed_when: false  # Don't fail if no process exists
 
     - name: Start Spring Boot app with nohup
-      shell: |
-        nohup java -jar {{ deploy_dir }}/{{ jar_name }} > /tmp/myapp.log 2>&1 &
+      ansible.builtin.shell: |
+        nohup java -jar {{ deploy_dir }}/{{ jar_name }} > {{ deploy_dir }}/app.log 2>&1 &
+      async: 10  # Don't wait for completion
+      poll: 0
