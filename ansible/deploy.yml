@@ -16,8 +16,10 @@
 
     - name: Copy JAR file
       ansible.builtin.copy:
-        src: "{{ playbook_dir }}/../target/{{ app_jar }}"
+        #src: "{{ playbook_dir }}/../target/{{ app_jar }}"
+        src: "{{ workspace_dir }}/deployments/{{ app_jar }}"
         dest: "{{ app_dir }}/"
+        remote_src: false
 
     - name: Find and kill existing Java process
       ansible.builtin.shell: |
