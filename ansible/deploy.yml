@@ -42,8 +42,13 @@
     - name: Start Spring Boot application
       ansible.builtin.shell: |
         nohup java -jar {{ app_dir }}/{{ app_jar }} > {{ app_dir }}/{{ app_log }} 2>&1 &
-        sleep 2  # Allow process to start
-        pgrep -f "java.*{{ app_dir }}/{{ app_jar }}" || exit 1
+        echo $! > {{ app_dir }}/app.pid
+        disown
+        sleep 5
+        if ! pgrep -f "java.*{{ app_dir }}/{{ app_jar }}"; then
+          echo "❌ Application failed to start"
+          exit 1
+        fi
       args:
         executable: /bin/bash
       register: app_start
