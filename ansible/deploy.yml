@@ -31,7 +31,9 @@
     - name: Terminate existing application
       #ansible.builtin.command: "pkill -f 'java.*.../{{ app_jar }}'"
       ansible.builtin.shell: |
-        pkill -f 'java.*{{ app_dir }}/{{ app_jar }}' || true
+        if pgrep -f 'java.*{{ app_dir }}/{{ app_jar }}'; then
+          pkill -f 'java.*{{ app_dir }}/{{ app_jar }}'
+        fi
       args:
         executable: /bin/bash
       ignore_errors: true
