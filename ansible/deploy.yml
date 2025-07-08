@@ -1,10 +1,11 @@
 ---
 - name: Deploy Spring Boot application
   hosts: localhost
-  become: false  # Disable sudo
+  become: false
   vars:
-    app_dir: "/home/jenkins/myapp"  # User-writable directory
+    app_dir: "/Users/nandhinirajasekaran/myapp"
     app_jar: "app.jar"
+    app_log: "app.log"
 
   tasks:
     - name: Ensure deployment directory exists
@@ -15,9 +16,8 @@
 
     - name: Copy JAR file
       ansible.builtin.copy:
-        src: "{{ workspace_dir }}/deployments/{{ app_jar }}"
+        src: "{{ playbook_dir }}/../target/{{ app_jar }}"
         dest: "{{ app_dir }}/"
-        remote_src: yes
 
     - name: Find and kill existing Java process
       ansible.builtin.shell: |
