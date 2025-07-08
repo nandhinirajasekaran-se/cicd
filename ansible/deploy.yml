@@ -45,7 +45,5 @@
         sleep 10  # Allow time for startup
       args:
         executable: /bin/bash
-      async: 30  # Ansible should wait up to 30s
-      poll: 0    # Don't wait for completion
       register: app_start
       changed_when: "'started' in app_start.stdout"
