@@ -42,6 +42,7 @@
     - name: Start Spring Boot application
       ansible.builtin.shell: |
         nohup java -jar {{ app_dir }}/{{ app_jar }} > {{ app_dir }}/{{ app_log }} 2>&1 &
+        sleep 5
       args:
         executable: /bin/bash
       register: app_start
