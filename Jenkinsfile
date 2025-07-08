@@ -9,7 +9,7 @@ pipeline {
     environment {
         // Customize these values
         DEPLOY_DIR = "${WORKSPACE}/deployments"
-        JAR_NAME = "ansible-*.jar"  // Wildcard to match versioned JARs
+        JAR_NAME = "your-app-*.jar"  // Wildcard to match versioned JARs
         ANSIBLE_DIR = "ansible"
     }
 
