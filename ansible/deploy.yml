@@ -3,7 +3,7 @@
   hosts: localhost
   become: false
   vars:
-    app_dir: "/Users/nandhinirajasekaran/myapp"
+    app_dir: "/var/jenkins_home/myapp"
     app_jar: "app.jar"
     app_log: "app.log"
 
