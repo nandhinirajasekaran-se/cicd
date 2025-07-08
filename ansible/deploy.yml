@@ -41,9 +41,14 @@
 
     - name: Start Spring Boot application
       ansible.builtin.shell: |
-        nohup java -jar {{ app_dir }}/{{ app_jar }} > {{ app_dir }}/{{ app_log }} 2>&1 &
-        sleep 5  # Give time for startup
-        disown -h %1  # Fully detach from shell
+        nohup java -jar {{ app_dir }}/{{ app_jar }} > {{ app_dir }}/app.log 2>&1 &
+        sleep 5  # Allow time for startup
+        if pgrep -f "java.*{{ app_dir }}/{{ app_jar }}"; then
+          echo "APPLICATION_STARTED"
+        else
+          echo "APPLICATION_FAILED"
+          exit 1
+        fi
       args:
         executable: /bin/bash
       async: 30  # Ansible should wait up to 30s
