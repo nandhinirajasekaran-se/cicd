@@ -8,6 +8,6 @@ public class Controller {
 
     @GetMapping("/test")
     public String retrieveLimits(){
-        return "Hello";
+        return "Hello Hi";
     }
 }
