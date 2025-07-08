@@ -45,5 +45,3 @@
         sleep 10  # Allow time for startup
       args:
         executable: /bin/bash
-      register: app_start
-      changed_when: "'started' in app_start.stdout"
