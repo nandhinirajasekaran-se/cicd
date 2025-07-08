@@ -1,12 +1,12 @@
 ---
 - name: Deploy Spring Boot application
   hosts: localhost
-  become: false  # No sudo needed for local deployment
+  become: true  # No sudo needed for local deployment
+  become_user: root  # Optional: specify user
 
   vars:
     app_dir: "/opt/myapp"
     app_jar: "app.jar"  # Matches your copied filename
-    app_log: "app.log"
 
   tasks:
     - name: Ensure deployment directory exists
@@ -14,6 +14,8 @@
         path: "{{ app_dir }}"
         state: directory
         mode: '0755'
+        owner: "{{ ansible_user_id }}"  # Sets owner to your current user
+        group: "{{ ansible_user_id }}"
 
     - name: Copy JAR file from workspace
       ansible.builtin.copy:
