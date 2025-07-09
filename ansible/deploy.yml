@@ -41,7 +41,7 @@
 
     - name: Start Spring Boot application
       ansible.builtin.shell: |
-        setsid nohup java -jar {{ app_dir }}/{{ app_jar }} > {{ app_dir }}/{{ app_log }} 2>&1 < /dev/null &
+        setsid  java -jar {{ app_dir }}/{{ app_jar }} > {{ app_dir }}/{{ app_log }} 2>&1 < /dev/null &
         sleep 10
         if ! pgrep -f "java.*{{ app_dir }}/{{ app_jar }}"; then
           echo "App failed to start"
