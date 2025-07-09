@@ -1,55 +1,55 @@
 pipeline {
     agent any
 
-    // Webhook trigger configuration
-    triggers {
-        githubPush()  // Requires GitHub plugin
-    }
-
     environment {
-        // Customize these values
-        DEPLOY_DIR = "${WORKSPACE}/deployments"
-        JAR_NAME = "your-app-*.jar"  // Wildcard to match versioned JARs
-        ANSIBLE_DIR = "ansible"
+        TARGET_DIR = "/var/jenkins_home/workspace/ansible-deployment/target"
+        JAR_NAME = "*.jar"  // Wildcard for versioned JARs
     }
 
     stages {
-        // Stage 1: SCM Checkout
-        stage('Checkout Code') {
+        stage('Checkout SCM') {
             steps {
-                checkout scm  // Automatically checks out the triggering commit
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    extensions: [[$class: 'CleanBeforeCheckout']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/nandhinirajasekaran-se/cicd.git'
+                        // Remove credentialsId if using public repo
+                    ]]
+                ])
             }
         }
 
-        // Stage 2: Maven Build
-        stage('Build with Maven') {
+        stage('Build') {
             steps {
-                sh '''
-                    chmod +x mvnw
-                    ./mvnw clean package -DskipTests
-                '''
-            }
-            post {
-                success {
-                    archiveArtifacts "target/${JAR_NAME}"  // Archive the built JAR
-                }
+                sh 'mvn clean package -DskipTests'
             }
         }
 
-        // Stage 3: Ansible Deployment
-        stage('Deploy with Ansible') {
+        stage('Deploy') {
             steps {
                 script {
-                    // Verify JAR exists
                     def jarFile = findFiles(glob: "target/${JAR_NAME}")[0].path
+                    dir('ansible') {
+sh'''
+    JAR_NAME="ansible-0.0.1-SNAPSHOT.jar"
+    DEPLOY_DIR="${WORKSPACE}/deployments"
 
-                    dir(ANSIBLE_DIR) {
-                        // Copy JAR to Ansible accessible location
-                        sh "mkdir -p ${DEPLOY_DIR}"
-                        sh "cp ../${jarFile} ${DEPLOY_DIR}/app.jar"
+    mkdir -p "${DEPLOY_DIR}"
+    echo "Copying ${TARGET_DIR}/${JAR_NAME} → ${DEPLOY_DIR}/app.jar"
 
-                        // Execute Ansible
-                        sh "ansible-playbook -i inventory deploy.yml -vvv"
+    if [ ! -f "${TARGET_DIR}/${JAR_NAME}" ]; then
+        echo "❌ JAR file not found at ${JAR_NAME}"
+        exit 1
+    fi
+
+    cp "${TARGET_DIR}/${JAR_NAME}" "${DEPLOY_DIR}/app.jar"
+
+    echo "Running Ansible playbook... ${WORKSPACE} "
+
+    ansible-playbook -i inventory deploy.yml -e "workspace_dir=${WORKSPACE}"
+'''
                     }
                 }
             }
@@ -58,23 +58,10 @@ pipeline {
 
     post {
         always {
-            junit 'target/surefire-reports/*.xml'  // Publish test reports
-            cleanWs()  // Clean workspace after build
-        }
-        success {
-            slackSend(
-                color: 'good',
-                message: "SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}\n" +
-                         "Commit: ${env.GIT_COMMIT.take(8)}\n" +
-                         "Branch: ${env.GIT_BRANCH}"
-            )
-        }
-        failure {
-            slackSend(
-                color: 'danger',
-                message: "FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}\n" +
-                         "See: ${env.BUILD_URL}console"
-            )
+            // Only archive if build succeeded
+            archiveArtifacts artifacts: "target/${JAR_NAME}", allowEmptyArchive: false
+            // Optional: Remove junit if no tests are run
+            // junit 'target/surefire-reports/*.xml'
         }
     }
 }
